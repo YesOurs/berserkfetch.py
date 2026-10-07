@@ -3,16 +3,31 @@ import winreg
 
 
 cpu_name_path = r"HARDWARE\DESCRIPTION\System\CentralProcessor\0"
+windows_current_version_path = r"SOFTWARE\Microsoft\Windows NT\CurrentVersion"
 
+# CPU name
 cpu_name_location = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, cpu_name_path)
 cpu_name = winreg.QueryValueEx(cpu_name_location, "ProcessorNameString")
-
-print(cpu_name[0])
-
 winreg.CloseKey(cpu_name_location)
 
+windows_current_version_location = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, windows_current_version_path)
 
+# Registered Owner's Name
+registered_owner = winreg.QueryValueEx(windows_current_version_location, "RegisteredOwner")
 
+# Build number
+build_number = winreg.QueryValueEx(windows_current_version_location, "CurrentBuildNumber")
+build_number_int = int(build_number[0])
+
+# Display Version
+display_version = winreg.QueryValueEx(windows_current_version_location, "DisplayVersion")
+
+# Product Name
+product_name = winreg.QueryValueEx(windows_current_version_location, "ProductName")
+
+winreg.CloseKey(windows_current_version_location)
+
+# RAM status
 class MemoryStatusEx(ctypes.Structure):
     _fields_ = [
         ("dwLength", ctypes.c_ulong),
@@ -29,4 +44,43 @@ class MemoryStatusEx(ctypes.Structure):
 ram = MemoryStatusEx()
 ram.dwLength = ctypes.sizeof(ram)
 ctypes.windll.kernel32.GlobalMemoryStatusEx(ctypes.byref(ram))
-print(ram.ullTotalPhys)
+
+total_ram_gb = round(ram.ullTotalPhys / (1024**3))
+avaible_ram_gb = round(ram.ullAvailPhys / (1024**3))
+ram_usage = total_ram_gb - avaible_ram_gb
+
+# Product name regulator
+if build_number_int >= 22000:
+    real_product_name = product_name[0].replace("Windows 10", "Windows 11")
+else:
+    real_product_name = product_name
+
+system_informations = [ 
+    f"OS: {real_product_name}",
+    f"Version: {display_version[0]}",
+    f"Registered: {registered_owner[0]}",
+    f"CPU: {cpu_name[0]}", 
+    f"RAM Usage: {ram_usage}/{total_ram_gb} GB"
+]
+
+logo = [
+"    ⠀⠀⠀⠀⠀⣿⠀⠀⠀⠀⠀ ⠀⠀",
+"⠀⠀⠀⢀⣴⠇⠀ ⣿⣿ ⠀⠘⣦⡀⠀⠀⠀",
+"⠀⠀⣰⣿⠃⠀⠀⠀⣿⣿⠀⠀⠀⠘⣿⣆⠀⠀",
+"⠀⢾⣿⣇⠀⠀⠀⠀⣿⣿⠀⠀⠀⠀⣸⣿⣷⠄",
+"⠀⠈⠻⣿⣷⣄⠀⠀⣿⣿⠀⠀⣠⣾⣿⠟⠁⠀",
+"⠀⠀⠀⠀⠻⣿⣷⣄⣿⣿⣠⣾⣿⠟⠁⠀⠀⠀",
+"⠀⠀⠀⠀⠀⠈⠻⣿⣿⣿⣿⠟⠁⠀⠀⠀⠀⠀",
+"⠀⠀⠀⠀⠀⢀⣴⣿⣿⣿⣿⣦⡀⠀⠀⠀⠀⠀",
+"⠀⠀⠀⢀⣴⣿⣿⠿⣿⣿⠿⣿⣿⣦⡀⠀⠀⠀",
+"⠀⢀⣰⣿⣿⠟⠁⠀⣿⣿⠀⠈⠻⣿⣿⣦⡀⠀",
+"⠰⣿⣿⣿⠁⠀⠀⠀⣿⣿⠀⠀⠀⠈⣻⣿⣿⠆",
+"⠀⠀⠹⣿⣷⣄⠀⠀⣿⣿⠀⠀⣠⣾⣿⠟⠁⠀",
+"⠀⠀⠀⠈⠻⣿⣷⣄⣿⣿⣠⣾⣿⠟⠁⠀⠀⠀",
+"⠀⠀⠀⠀⠀⠈⠻⣿⣿⣿⣿⠟⠁⠀⠀⠀⠀⠀",
+"⠀⠀⠀⠀⠀⠀⠀⠈⢻⡟⠁⠀⠀⠀⠀⠀⠀⠀"
+]
+
+for logo, system_informations in zip(logo, system_informations):
+    print(f"{logo}                     {system_informations}")
+
