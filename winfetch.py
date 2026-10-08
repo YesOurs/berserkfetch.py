@@ -1,7 +1,7 @@
 import ctypes
 import winreg
 
-
+gpu_name_path = r"SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}\0000"
 cpu_name_path = r"HARDWARE\DESCRIPTION\System\CentralProcessor\0"
 windows_current_version_path = r"SOFTWARE\Microsoft\Windows NT\CurrentVersion"
 
@@ -26,6 +26,11 @@ display_version = winreg.QueryValueEx(windows_current_version_location, "Display
 product_name = winreg.QueryValueEx(windows_current_version_location, "ProductName")
 
 winreg.CloseKey(windows_current_version_location)
+
+# GPU Name
+gpu_name_location = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, gpu_name_path)
+gpu_name = winreg.QueryValueEx(gpu_name_location, "HardwareInformation.AdapterString")
+winreg.CloseKey(gpu_name_location)
 
 # RAM status
 class MemoryStatusEx(ctypes.Structure):
@@ -59,7 +64,8 @@ system_informations = [
     f"OS: {real_product_name}",
     f"Version: {display_version[0]}",
     f"Registered: {registered_owner[0]}",
-    f"CPU: {cpu_name[0]}", 
+    f"CPU: {cpu_name[0]}",
+    f"GPU: {gpu_name[0]}", 
     f"RAM Usage: {ram_usage}/{total_ram_gb} GB"
 ]
 
