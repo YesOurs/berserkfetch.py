@@ -32,6 +32,15 @@ gpu_name_location = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, gpu_name_path)
 gpu_name = winreg.QueryValueEx(gpu_name_location, "HardwareInformation.AdapterString")
 winreg.CloseKey(gpu_name_location)
 
+# Resolution Scale
+user32 = ctypes.windll.user32
+user32.SetProcessDPIAware()
+
+width = user32.GetSystemMetrics(0)
+height = user32.GetSystemMetrics(1)
+
+resolution = f"{width}x{height}"
+
 # RAM status
 class MemoryStatusEx(ctypes.Structure):
     _fields_ = [
@@ -50,9 +59,9 @@ ram = MemoryStatusEx()
 ram.dwLength = ctypes.sizeof(ram)
 ctypes.windll.kernel32.GlobalMemoryStatusEx(ctypes.byref(ram))
 
-total_ram_gb = round(ram.ullTotalPhys / (1024**3))
-avaible_ram_gb = round(ram.ullAvailPhys / (1024**3))
-ram_usage = total_ram_gb - avaible_ram_gb
+total_ram_gb = round(ram.ullTotalPhys / (1024**3), 2)
+avaible_ram_gb = round(ram.ullAvailPhys / (1024**3), 2)
+ram_usage = round(total_ram_gb - avaible_ram_gb, 2)
 
 # Product name regulator
 if build_number_int >= 22000:
@@ -61,16 +70,25 @@ else:
     real_product_name = product_name
 
 system_informations = [ 
+    "",
     f"OS: {real_product_name}",
     f"Version: {display_version[0]}",
     f"Registered: {registered_owner[0]}",
+    f"Resolution: {resolution}",
     f"CPU: {cpu_name[0]}",
     f"GPU: {gpu_name[0]}", 
-    f"RAM Usage: {ram_usage}/{total_ram_gb} GB"
+    f"RAM Usage: {ram_usage}/{total_ram_gb} GB",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    ""
 ]
 
 logo = [
-"    ⠀⠀⠀⠀⠀⣿⠀⠀⠀⠀⠀ ⠀⠀",
+"    ⠀⠀⠀⠀⣿⣿⠀⠀⠀⠀⠀ ⠀⠀",
 "⠀⠀⠀⢀⣴⠇⠀ ⣿⣿ ⠀⠘⣦⡀⠀⠀⠀",
 "⠀⠀⣰⣿⠃⠀⠀⠀⣿⣿⠀⠀⠀⠘⣿⣆⠀⠀",
 "⠀⢾⣿⣇⠀⠀⠀⠀⣿⣿⠀⠀⠀⠀⣸⣿⣷⠄",
