@@ -3,6 +3,7 @@ import winreg
 
 gpu_name_path = r"SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}\0000"
 cpu_name_path = r"HARDWARE\DESCRIPTION\System\CentralProcessor\0"
+host_name_path = r"HARDWARE\DESCRIPTION\System\BIOS"
 windows_current_version_path = r"SOFTWARE\Microsoft\Windows NT\CurrentVersion"
 
 # CPU name
@@ -31,6 +32,11 @@ winreg.CloseKey(windows_current_version_location)
 gpu_name_location = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, gpu_name_path)
 gpu_name = winreg.QueryValueEx(gpu_name_location, "HardwareInformation.AdapterString")
 winreg.CloseKey(gpu_name_location)
+
+# Product Name
+host_name_location = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, host_name_path)
+host_name = winreg.QueryValueEx(host_name_location, "SystemProductName")
+winreg.CloseKey(host_name_location)
 
 # Resolution Scale
 user32 = ctypes.windll.user32
@@ -86,13 +92,13 @@ system_informations = [
     "",
     f"OS: {real_product_name}",
     f"Version: {display_version[0]}",
+    f"Host: {host_name[0]}",
     f"Registered: {registered_owner[0]}",
     f"Resolution: {resolution}",
     f"CPU: {cpu_name[0]}",
     f"GPU: {gpu_name[0]}", 
     f"RAM Usage: {ram_usage}/{total_ram_gb} GB",
     uptime_text,
-    "",
     "",
     "",
     "",
