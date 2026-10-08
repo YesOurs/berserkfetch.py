@@ -41,6 +41,19 @@ height = user32.GetSystemMetrics(1)
 
 resolution = f"{width}x{height}"
 
+# Uptime Record
+uptime_millisecond = ctypes.windll.kernel32.GetTickCount64()
+uptime_second = (uptime_millisecond // 1000) % 60
+uptime_minute = (uptime_millisecond // 1000 // 60) % 60
+uptime_hour = (uptime_millisecond // 1000 // 60 // 60) % 24
+uptime_day = (uptime_millisecond // 1000 // 60 // 60 // 24)
+
+# Uptime checker
+if uptime_day == 0:
+    uptime_text = f"Uptime: {uptime_hour} hours {uptime_minute} minutes {uptime_second} seconds"
+else:
+    uptime_text = f"Uptime: {uptime_day} days {uptime_hour} hours {uptime_minute} minutes {uptime_second} seconds"
+
 # RAM status
 class MemoryStatusEx(ctypes.Structure):
     _fields_ = [
@@ -67,7 +80,7 @@ ram_usage = round(total_ram_gb - avaible_ram_gb, 2)
 if build_number_int >= 22000:
     real_product_name = product_name[0].replace("Windows 10", "Windows 11")
 else:
-    real_product_name = product_name
+    real_product_name = product_name[0]
 
 system_informations = [ 
     "",
@@ -78,7 +91,7 @@ system_informations = [
     f"CPU: {cpu_name[0]}",
     f"GPU: {gpu_name[0]}", 
     f"RAM Usage: {ram_usage}/{total_ram_gb} GB",
-    "",
+    uptime_text,
     "",
     "",
     "",
