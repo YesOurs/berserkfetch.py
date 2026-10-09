@@ -1,5 +1,6 @@
 import ctypes
 import winreg
+from ctypes import wintypes
 
 gpu_name_path = r"SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}\0000"
 cpu_name_path = r"HARDWARE\DESCRIPTION\System\CentralProcessor\0"
@@ -60,6 +61,22 @@ if uptime_day == 0:
 else:
     uptime_text = f"Uptime: {uptime_day} days {uptime_hour} hours {uptime_minute} minutes {uptime_second} seconds"
 
+# Disk status
+free_bytes_available = wintypes.ULARGE_INTEGER()
+total_number_of_bytes = wintypes.ULARGE_INTEGER()
+total_number_of_free_bytes = wintypes.ULARGE_INTEGER()
+
+ctypes.windll.kernel32.GetDiskFreeSpaceExW(
+    ctypes.c_wchar_p("C:\\"),
+    ctypes.byref(free_bytes_available),
+    ctypes.byref(total_number_of_bytes),
+    ctypes.byref(total_number_of_free_bytes)
+)
+
+disk_size = total_number_of_bytes.value / (1024 ** 3)
+disk_usage = round(disk_size - (total_number_of_free_bytes.value / (1024 ** 3)), 2)
+disk_size = round(disk_size, 2)
+
 # RAM status
 class MemoryStatusEx(ctypes.Structure):
     _fields_ = [
@@ -98,8 +115,8 @@ system_informations = [
     f"CPU: {cpu_name[0]}",
     f"GPU: {gpu_name[0]}", 
     f"RAM Usage: {ram_usage}/{total_ram_gb} GB",
+    f"Disk Usage: {disk_usage}/{disk_size} GB",
     uptime_text,
-    "",
     "",
     "",
     "",
