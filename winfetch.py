@@ -31,24 +31,12 @@ with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, host_name_path) as host_name_loca
     host_name = winreg.QueryValueEx(host_name_location, "SystemProductName")[0]
 
 # Terminal name
-shell_name = "unknow_shell"
-
-h_process = ctypes.windll.kernel32.OpenProcess(0x1000, False, os.getppid())
-if h_process:
-    buffer = ctypes.create_unicode_buffer(1024)
-    size = wintypes.DWORD(1024)
-        
-    if ctypes.windll.kernel32.QueryFullProcessImageNameW(h_process, 0, buffer, ctypes.byref(size)):
-        shell_name = buffer.value.split('\\')[-1].lower()
-            
-    ctypes.windll.kernel32.CloseHandle(h_process)
-
-if "powershell" in shell_name or "pwsh" in shell_name:
-    shell_name = "PowerShell"
-elif "cmd.exe" in shell_name:
+if "PROMPT" in os.environ:
     shell_name = "CMD"
+elif "PSModulePath" in os.environ:
+    shell_name = "PowerShell"
 else:
-    shell_name = "Unknow Shell"
+    shell_name = "unknown shell"
 
 # Resolution Scale
 user32 = ctypes.windll.user32
