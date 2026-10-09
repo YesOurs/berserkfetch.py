@@ -1,17 +1,16 @@
+import os
 import ctypes
 import winreg
 from ctypes import wintypes
 
-desktop_name_path = r"Volatile Environment"
 gpu_name_path = r"SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}\0000"
 cpu_name_path = r"HARDWARE\DESCRIPTION\System\CentralProcessor\0"
 host_name_path = r"HARDWARE\DESCRIPTION\System\BIOS"
 windows_current_version_path = r"SOFTWARE\Microsoft\Windows NT\CurrentVersion"
 
 # Desktop name
-with winreg.OpenKey(winreg.HKEY_CURRENT_USER, desktop_name_path) as desktop_name_location:
-    user_name = winreg.QueryValueEx(desktop_name_location, "USERNAME")[0]
-    domain_name = winreg.QueryValueEx(desktop_name_location, "USERDOMAIN")[0]
+computer_name = os.environ.get("COMPUTERNAME")
+user_name = os.environ.get("USERNAME")
 
 # OS Informations
 with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, windows_current_version_path) as windows_current_version_location:
@@ -30,6 +29,26 @@ with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, gpu_name_path) as gpu_name_locati
 # Host Name
 with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, host_name_path) as host_name_location:
     host_name = winreg.QueryValueEx(host_name_location, "SystemProductName")[0]
+
+# Terminal name
+shell_name = "unknow_shell"
+
+h_process = ctypes.windll.kernel32.OpenProcess(0x1000, False, os.getppid())
+if h_process:
+    buffer = ctypes.create_unicode_buffer(1024)
+    size = wintypes.DWORD(1024)
+        
+    if ctypes.windll.kernel32.QueryFullProcessImageNameW(h_process, 0, buffer, ctypes.byref(size)):
+        shell_name = buffer.value.split('\\')[-1].lower()
+            
+    ctypes.windll.kernel32.CloseHandle(h_process)
+
+if "powershell" in shell_name or "pwsh" in shell_name:
+    shell_name = "PowerShell"
+elif "cmd.exe" in shell_name:
+    shell_name = "CMD"
+else:
+    shell_name = "Unknow Shell"
 
 # Resolution Scale
 user32 = ctypes.windll.user32
@@ -106,11 +125,12 @@ else:
 
 system_informations = [ 
     "",
-    f"{user_name}@{domain_name}",
+    f"{user_name}@{computer_name}",
     "-----------------------------------",
     f"OS: {real_product_name}",
     f"Version: {display_version}",
     f"Kernel: {build_number}",
+    f"Terminal: {shell_name}",
     f"Host: {host_name}",
     f"Resolution: {resolution}",
     f"CPU: {cpu_name}",
@@ -118,7 +138,6 @@ system_informations = [
     f"RAM Usage: {ram_usage}/{total_ram_gb} GB",
     f"Disk Usage: {disk_info_text}",
     uptime_text,
-    "",
     ""
 ]
 
