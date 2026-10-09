@@ -2,50 +2,40 @@ import ctypes
 import winreg
 from ctypes import wintypes
 
+desktop_name_path = r"Volatile Environment"
 gpu_name_path = r"SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}\0000"
 cpu_name_path = r"HARDWARE\DESCRIPTION\System\CentralProcessor\0"
 host_name_path = r"HARDWARE\DESCRIPTION\System\BIOS"
 windows_current_version_path = r"SOFTWARE\Microsoft\Windows NT\CurrentVersion"
 
+# Desktop name
+with winreg.OpenKey(winreg.HKEY_CURRENT_USER, desktop_name_path) as desktop_name_location:
+    user_name = winreg.QueryValueEx(desktop_name_location, "USERNAME")[0]
+    domain_name = winreg.QueryValueEx(desktop_name_location, "USERDOMAIN")[0]
+
+# OS Informations
+with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, windows_current_version_path) as windows_current_version_location:
+    build_number = int(winreg.QueryValueEx(windows_current_version_location, "CurrentBuildNumber")[0])
+    display_version = winreg.QueryValueEx(windows_current_version_location, "DisplayVersion")[0]
+    product_name = winreg.QueryValueEx(windows_current_version_location, "ProductName")[0]
+
 # CPU name
-cpu_name_location = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, cpu_name_path)
-cpu_name = winreg.QueryValueEx(cpu_name_location, "ProcessorNameString")
-winreg.CloseKey(cpu_name_location)
-
-windows_current_version_location = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, windows_current_version_path)
-
-# Registered Owner's Name
-registered_owner = winreg.QueryValueEx(windows_current_version_location, "RegisteredOwner")
-
-# Build number
-build_number = winreg.QueryValueEx(windows_current_version_location, "CurrentBuildNumber")
-build_number_int = int(build_number[0])
-
-# Display Version
-display_version = winreg.QueryValueEx(windows_current_version_location, "DisplayVersion")
-
-# Product Name
-product_name = winreg.QueryValueEx(windows_current_version_location, "ProductName")
-
-winreg.CloseKey(windows_current_version_location)
+with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, cpu_name_path) as cpu_name_location:
+    cpu_name = winreg.QueryValueEx(cpu_name_location, "ProcessorNameString")[0]
 
 # GPU Name
-gpu_name_location = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, gpu_name_path)
-gpu_name = winreg.QueryValueEx(gpu_name_location, "HardwareInformation.AdapterString")
-winreg.CloseKey(gpu_name_location)
+with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, gpu_name_path) as gpu_name_location:
+    gpu_name = winreg.QueryValueEx(gpu_name_location, "HardwareInformation.AdapterString")[0]
 
 # Host Name
-host_name_location = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, host_name_path)
-host_name = winreg.QueryValueEx(host_name_location, "SystemProductName")
-winreg.CloseKey(host_name_location)
+with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, host_name_path) as host_name_location:
+    host_name = winreg.QueryValueEx(host_name_location, "SystemProductName")[0]
 
 # Resolution Scale
 user32 = ctypes.windll.user32
 user32.SetProcessDPIAware()
-
 width = user32.GetSystemMetrics(0)
 height = user32.GetSystemMetrics(1)
-
 resolution = f"{width}x{height}"
 
 # Uptime Record
@@ -55,7 +45,6 @@ uptime_minute = (uptime_millisecond // 1000 // 60) % 60
 uptime_hour = (uptime_millisecond // 1000 // 60 // 60) % 24
 uptime_day = (uptime_millisecond // 1000 // 60 // 60 // 24)
 
-# Uptime checker
 if uptime_day == 0:
     uptime_text = f"Uptime: {uptime_hour} hours {uptime_minute} minutes {uptime_second} seconds"
 else:
@@ -65,13 +54,12 @@ else:
 free_bytes_available = wintypes.ULARGE_INTEGER()
 total_number_of_bytes = wintypes.ULARGE_INTEGER()
 total_number_of_free_bytes = wintypes.ULARGE_INTEGER()
-disk_status = {}
 
-# ---------- Buffer for write disk text -----------
 disk_path_buffer = ctypes.create_unicode_buffer(100)
 ctypes.windll.kernel32.GetLogicalDriveStringsW(100, disk_path_buffer)
 disk_paths = [disk for disk in disk_path_buffer[:].split('\x00') if disk]
-# --------------------------------------------------
+
+disk_info_list = []
 
 for disk in disk_paths:
     disk_report = ctypes.windll.kernel32.GetDiskFreeSpaceExW(
@@ -81,17 +69,12 @@ for disk in disk_paths:
         ctypes.byref(total_number_of_free_bytes)
     )
 
-    disk_size = total_number_of_bytes.value / (1024 ** 3)
-    disk_usage = round(disk_size - (total_number_of_free_bytes.value / (1024 ** 3)), 2)
-    disk_size = round(disk_size, 2)
-
     if disk_report:
-        disk_status[disk] = {
-            f"{disk_usage}/{disk_size}"
-        }
+        disk_size = total_number_of_bytes.value / (1024 ** 3)
+        disk_usage = disk_size - (total_number_of_free_bytes.value / (1024 ** 3))
+        disk_info_list.append(f"{disk} {round(disk_usage, 2)}/{round(disk_size, 2)} GB")
 
-for disk, info in disk_status.items():
-    disk_info = f"{disk} {disk_usage}/{disk_size} GB "
+disk_info_text = " | ".join(disk_info_list)
 
 # RAM status
 class MemoryStatusEx(ctypes.Structure):
@@ -116,25 +99,25 @@ avaible_ram_gb = round(ram.ullAvailPhys / (1024**3), 2)
 ram_usage = round(total_ram_gb - avaible_ram_gb, 2)
 
 # Product name regulator
-if build_number_int >= 22000:
-    real_product_name = product_name[0].replace("Windows 10", "Windows 11")
+if build_number >= 22000:
+    real_product_name = product_name.replace("Windows 10", "Windows 11")
 else:
-    real_product_name = product_name[0]
+    real_product_name = product_name
 
 system_informations = [ 
     "",
+    f"{user_name}@{domain_name}",
+    "-----------------------------------",
     f"OS: {real_product_name}",
-    f"Version: {display_version[0]}",
-    f"Host: {host_name[0]}",
-    f"Registered: {registered_owner[0]}",
+    f"Version: {display_version}",
+    f"Kernel: {build_number}",
+    f"Host: {host_name}",
     f"Resolution: {resolution}",
-    f"CPU: {cpu_name[0]}",
-    f"GPU: {gpu_name[0]}", 
+    f"CPU: {cpu_name}",
+    f"GPU: {gpu_name}", 
     f"RAM Usage: {ram_usage}/{total_ram_gb} GB",
-    f"Disk Usage: {disk_info}",
+    f"Disk Usage: {disk_info_text}",
     uptime_text,
-    "",
-    "",
     "",
     ""
 ]
@@ -157,6 +140,5 @@ logo = [
 "⠀⠀⠀⠀⠀⠀⠀⠈⢻⡟⠁⠀⠀⠀⠀⠀⠀⠀"
 ]
 
-for logo, system_informations in zip(logo, system_informations):
-    print(f"{logo}                     {system_informations}")
-
+for logo_line, info_line in zip(logo, system_informations):
+    print(f"{logo_line}                 {info_line}")
