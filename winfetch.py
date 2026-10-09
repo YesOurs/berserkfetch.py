@@ -34,7 +34,7 @@ gpu_name_location = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, gpu_name_path)
 gpu_name = winreg.QueryValueEx(gpu_name_location, "HardwareInformation.AdapterString")
 winreg.CloseKey(gpu_name_location)
 
-# Product Name
+# Host Name
 host_name_location = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, host_name_path)
 host_name = winreg.QueryValueEx(host_name_location, "SystemProductName")
 winreg.CloseKey(host_name_location)
@@ -65,17 +65,33 @@ else:
 free_bytes_available = wintypes.ULARGE_INTEGER()
 total_number_of_bytes = wintypes.ULARGE_INTEGER()
 total_number_of_free_bytes = wintypes.ULARGE_INTEGER()
+disk_status = {}
 
-ctypes.windll.kernel32.GetDiskFreeSpaceExW(
-    ctypes.c_wchar_p("C:\\"),
-    ctypes.byref(free_bytes_available),
-    ctypes.byref(total_number_of_bytes),
-    ctypes.byref(total_number_of_free_bytes)
-)
+# ---------- Buffer for write disk text -----------
+disk_path_buffer = ctypes.create_unicode_buffer(100)
+ctypes.windll.kernel32.GetLogicalDriveStringsW(100, disk_path_buffer)
+disk_paths = [disk for disk in disk_path_buffer[:].split('\x00') if disk]
+# --------------------------------------------------
 
-disk_size = total_number_of_bytes.value / (1024 ** 3)
-disk_usage = round(disk_size - (total_number_of_free_bytes.value / (1024 ** 3)), 2)
-disk_size = round(disk_size, 2)
+for disk in disk_paths:
+    disk_report = ctypes.windll.kernel32.GetDiskFreeSpaceExW(
+        ctypes.c_wchar_p(disk),
+        ctypes.byref(free_bytes_available),
+        ctypes.byref(total_number_of_bytes),
+        ctypes.byref(total_number_of_free_bytes)
+    )
+
+    disk_size = total_number_of_bytes.value / (1024 ** 3)
+    disk_usage = round(disk_size - (total_number_of_free_bytes.value / (1024 ** 3)), 2)
+    disk_size = round(disk_size, 2)
+
+    if disk_report:
+        disk_status[disk] = {
+            f"{disk_usage}/{disk_size}"
+        }
+
+for disk, info in disk_status.items():
+    disk_info = f"{disk} {disk_usage}/{disk_size} GB "
 
 # RAM status
 class MemoryStatusEx(ctypes.Structure):
@@ -115,7 +131,7 @@ system_informations = [
     f"CPU: {cpu_name[0]}",
     f"GPU: {gpu_name[0]}", 
     f"RAM Usage: {ram_usage}/{total_ram_gb} GB",
-    f"Disk Usage: {disk_usage}/{disk_size} GB",
+    f"Disk Usage: {disk_info}",
     uptime_text,
     "",
     "",
